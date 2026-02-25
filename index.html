@@ -1,277 +1,225 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Para Ti</title>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            /* Fondo base oscuro por si tarda en cargar el canvas */
-            background-color: #020111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            font-family: 'Dancing Script', cursive; 
-        }
-        canvas {
-            display: block;
-            max-width: 100%; 
-            max-height: 100%;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Para Ti</title>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #010008;
+    overflow: hidden;
+}
+canvas {
+    display: block;
+}
+</style>
 </head>
 <body>
-    <canvas id="florCanvas"></canvas>
+<script>
+let stars = [];
+let comets = [];
+let flowerLayer;
+let petalRing = 6;
+let currentPetal = 0;
+let seedIndex = 0;
+const maxSeeds = 450;
+let phase = 0;
+let textAlpha = 0;
+let cx, cy;
 
-    <script>
-        const canvas = document.getElementById('florCanvas');
-        const ctx = canvas.getContext('2d');
+function setup() {
+    createCanvas(windowWidth, windowHeight);
+    angleMode(DEGREES);
+    cx = width / 2;
+    cy = (height / 2) - 80; 
+    
+    flowerLayer = createGraphics(windowWidth, windowHeight);
+    flowerLayer.angleMode(DEGREES);
+    flowerLayer.translate(cx, cy);
 
-        // Variables de la flor y texto
-        const totalPetalos = 16; // Menos pétalos para más elegancia
-        let progresoFlor = 0; // Controla la aparición lenta de los pétalos
-        let escalaCentro = 0; 
-        let opacidadTexto = 0; 
-        let centroX, centroY;
+    flowerLayer.strokeWeight(10);
+    flowerLayer.stroke(34, 139, 34);
+    flowerLayer.noFill();
+    flowerLayer.bezier(0, 0, -20, 100, 20, 250, -10, height - cy + 100);
 
-        // Variables del fondo estelar
-        const estrellas = [];
-        const cometas = [];
+    for (let i = 0; i < 200; i++) {
+        stars.push({
+            x: random(width),
+            y: random(height),
+            r: random(0.5, 2.5),
+            alpha: random(50, 255),
+            speed: random(-3, 3)
+        });
+    }
 
-        function ajustarCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            centroX = canvas.width / 2;
-            centroY = canvas.height / 2; 
+    for (let i = 0; i < 6; i++) {
+        comets.push(new Cometa());
+    }
+}
+
+class Cometa {
+    constructor() {
+        this.reset();
+    }
+    reset() {
+        this.x = random(width);
+        this.y = random(-100, -10);
+        this.length = random(60, 180);
+        this.speed = random(12, 22);
+        this.angle = 45;
+        this.delay = random(10, 200);
+    }
+    update() {
+        if (this.delay > 0) {
+            this.delay--;
+            return;
         }
-        window.addEventListener('resize', ajustarCanvas);
-        ajustarCanvas();
-
-        // --- Crear Fondo Estrellado ---
-        for (let i = 0; i < 150; i++) {
-            estrellas.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 1.5 + 0.5,
-                alpha: Math.random(),
-                cambioAlpha: (Math.random() * 0.02) - 0.01 // Velocidad de parpadeo
-            });
+        this.x += cos(this.angle) * this.speed;
+        this.y += sin(this.angle) * this.speed;
+        if (this.x > width + 200 || this.y > height + 200) {
+            this.reset();
         }
+    }
+    draw() {
+        if (this.delay > 0) return;
+        push();
+        strokeWeight(3);
+        let grad = drawingContext.createLinearGradient(this.x, this.y, this.x - cos(this.angle) * this.length, this.y - sin(this.angle) * this.length);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        drawingContext.strokeStyle = grad;
+        line(this.x, this.y, this.x - cos(this.angle) * this.length, this.y - sin(this.angle) * this.length);
+        pop();
+    }
+}
 
-        // --- Crear Cometas ---
-        class Cometa {
-            constructor() {
-                this.reset();
-                this.retraso = Math.random() * 300; // Retraso inicial
-            }
-            reset() {
-                this.x = Math.random() * canvas.width;
-                this.y = -50;
-                this.longitud = Math.random() * 100 + 50;
-                this.velocidad = Math.random() * 8 + 6;
-                this.angulo = Math.PI / 4; // 45 grados en diagonal
-                this.opacidad = Math.random() * 0.6 + 0.2;
-                this.retraso = Math.random() * 200 + 100; // Tiempo entre cometas
-            }
-            dibujar() {
-                if (this.retraso > 0) {
-                    this.retraso--;
-                    return;
-                }
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.angulo);
-                
-                // Efecto de estela del cometa
-                let grad = ctx.createLinearGradient(0, 0, -this.longitud, 0);
-                grad.addColorStop(0, `rgba(255, 255, 255, ${this.opacidad})`);
-                grad.addColorStop(1, `rgba(255, 255, 255, 0)`);
-                
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(-this.longitud, 0);
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = grad;
-                ctx.stroke();
-                ctx.restore();
+function draw() {
+    background(1, 0, 12, 60);
 
-                // Movimiento
-                this.x += Math.cos(this.angulo) * this.velocidad;
-                this.y += Math.sin(this.angulo) * this.velocidad;
+    noStroke();
+    for (let s of stars) {
+        fill(255, 255, 255, s.alpha);
+        circle(s.x, s.y, s.r);
+        s.alpha += s.speed;
+        if (s.alpha <= 20 || s.alpha >= 255) s.speed *= -1;
+    }
 
-                // Reiniciar si sale de la pantalla
-                if (this.x > canvas.width + 100 || this.y > canvas.height + 100) {
-                    this.reset();
-                }
-            }
+    for (let c of comets) {
+        c.update();
+        c.draw();
+    }
+
+    image(flowerLayer, 0, 0);
+
+    if (frameCount % 3 === 0) {
+        if (phase === 0) {
+            drawPetalRing();
+        } else if (phase === 1) {
+            drawSeeds();
         }
+    }
 
-        // Instanciar 3 cometas
-        for(let i=0; i<3; i++) cometas.push(new Cometa());
+    if (phase === 2) {
+        textAlpha += 1.5;
+        if (textAlpha > 255) textAlpha = 255;
+        push();
+        textFont('Dancing Script');
+        textSize(80);
+        textAlign(CENTER, CENTER);
+        fill(255, 255, 255, textAlpha);
+        drawingContext.shadowColor = 'rgba(0,0,0,0.9)';
+        drawingContext.shadowBlur = 15;
+        text("Te Amo", cx, cy + 60);
+        pop();
+    }
+}
 
+function drawPetalRing() {
+    if (petalRing < 0) {
+        phase = 1;
+        return;
+    }
 
-        // --- Funciones de Dibujo de la Flor ---
+    let numPetals = 12 + petalRing * 6;
+    let radius = 10 + petalRing * 8;
+    let pAngle = 360 / numPetals;
 
-        function dibujarTallo(x, y) {
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.bezierCurveTo(x - 30, y + 100, x + 20, y + 200, x - 10, y + 400);
-            ctx.lineWidth = 12;
-            ctx.strokeStyle = '#2dba67'; 
-            ctx.lineCap = 'round';
-            ctx.stroke();
-        }
+    flowerLayer.push();
+    flowerLayer.rotate(currentPetal * pAngle + (petalRing % 2 * 10));
+    
+    let petalLength = 60 + petalRing * 11;
+    let petalWidth = 15 + petalRing * 4;
 
-        function dibujarPetalo(x, y, rotacion) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(rotacion);
+    let grad = flowerLayer.drawingContext.createLinearGradient(0, 0, petalLength, 0);
+    grad.addColorStop(0, '#f39c12');
+    grad.addColorStop(0.2, '#f1c40f');
+    grad.addColorStop(1, '#fceabb');
 
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            // Forma de pétalo más natural y hermosa
-            ctx.bezierCurveTo(40, -50, 130, -40, 160, 0);
-            ctx.bezierCurveTo(130, 40, 40, 50, 0, 0);
-            ctx.closePath();
+    flowerLayer.fill(255);
+    flowerLayer.drawingContext.fillStyle = grad;
+    flowerLayer.stroke(211, 84, 0, 150);
+    flowerLayer.strokeWeight(0.5);
 
-            // Degradado del pétalo
-            let grad = ctx.createLinearGradient(0, 0, 160, 0);
-            grad.addColorStop(0, '#ffeb3b'); // Amarillo muy vivo en la base
-            grad.addColorStop(1, '#f39c12'); // Naranja en la punta
-            ctx.fillStyle = grad;
-            ctx.fill();
+    flowerLayer.beginShape();
+    flowerLayer.vertex(radius, 0);
+    flowerLayer.bezierVertex(radius + petalLength / 2, -petalWidth, radius + petalLength, -petalWidth / 4, radius + petalLength, 0);
+    flowerLayer.bezierVertex(radius + petalLength, petalWidth / 4, radius + petalLength / 2, petalWidth, radius, 0);
+    flowerLayer.endShape(CLOSE);
+    
+    flowerLayer.stroke(211, 84, 0, 90);
+    flowerLayer.noFill();
+    flowerLayer.bezier(radius, 0, radius + petalLength / 2, -3, radius + petalLength - 15, 0, radius + petalLength, 0);
 
-            // Línea de detalle en el centro del pétalo
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.quadraticCurveTo(80, -5, 140, 0);
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = 'rgba(211, 84, 0, 0.4)';
-            ctx.stroke();
+    flowerLayer.pop();
 
-            // Borde sutil
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = '#e67e22'; 
-            ctx.stroke();
+    currentPetal++;
+    if (currentPetal >= numPetals) {
+        currentPetal = 0;
+        petalRing--;
+    }
+}
 
-            ctx.restore();
-        }
-
-        function dibujarCentro(x, y, escala) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.scale(escala, escala); 
-
-            ctx.beginPath();
-            ctx.arc(0, 0, 45, 0, Math.PI * 2); // Centro un poco más grande
-            
-            let grad = ctx.createRadialGradient(0, 0, 5, 0, 0, 45);
-            grad.addColorStop(0, '#5c2c16'); // Café muy oscuro
-            grad.addColorStop(0.7, '#8e44ad'); // Tono morado profundo
-            grad.addColorStop(1, '#d35400'); // Borde naranja tostado
-            
-            ctx.fillStyle = grad;
-            ctx.fill();
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = '#3e1a0b';
-            ctx.stroke();
-            
-            // Textura del centro (pequeños puntos)
-            ctx.fillStyle = '#e67e22';
-            for(let i=0; i<100; i++) {
-                let ang = Math.random() * Math.PI * 2;
-                let rad = Math.random() * 38;
-                ctx.beginPath();
-                ctx.arc(Math.cos(ang)*rad, Math.sin(ang)*rad, 1.5, 0, Math.PI*2);
-                ctx.fill();
-            }
-
-            ctx.restore();
-        }
-
-        function dibujarTextoFinal() {
-            ctx.save();
-            ctx.globalAlpha = opacidadTexto;
-            ctx.font = "bold 80px 'Dancing Script', cursive";
-            ctx.fillStyle = "#ffffff"; 
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            
-            ctx.shadowColor = "rgba(0, 0, 0, 0.9)"; 
-            ctx.shadowBlur = 20;
-            ctx.shadowOffsetX = 3;
-            ctx.shadowOffsetY = 3;
-            
-            ctx.fillText("Te Amo", centroX, centroY);
-            ctx.restore();
+function drawSeeds() {
+    let maxPerFrame = 6;
+    for (let i = 0; i < maxPerFrame; i++) {
+        if (seedIndex > maxSeeds) {
+            phase = 2;
+            return;
         }
 
-        // --- Bucle de Animación Principal (60 FPS) ---
+        let c = 3.5;
+        let a = seedIndex * 137.5;
+        let r = c * sqrt(seedIndex);
 
-        function animar() {
-            // 1. Dibujar fondo estelar (Limpia el frame anterior)
-            let gradFondo = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradFondo.addColorStop(0, '#020111'); // Azul muy oscuro
-            gradFondo.addColorStop(1, '#20124d'); // Morado nocturno
-            ctx.fillStyle = gradFondo;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        let x = r * cos(a);
+        let y = r * sin(a);
 
-            // Animar y dibujar estrellas
-            estrellas.forEach(estrella => {
-                estrella.alpha += estrella.cambioAlpha;
-                if(estrella.alpha <= 0 || estrella.alpha >= 1) {
-                    estrella.cambioAlpha *= -1; // Invertir parpadeo
-                }
-                ctx.beginPath();
-                ctx.arc(estrella.x, estrella.y, estrella.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, estrella.alpha)})`;
-                ctx.fill();
-            });
+        flowerLayer.push();
+        flowerLayer.translate(x, y);
+        flowerLayer.rotate(a);
+        
+        let lerpFac = map(seedIndex, 0, maxSeeds, 0, 1);
+        let col = lerpColor(color(40, 15, 0), color(160, 70, 0), lerpFac);
+        
+        flowerLayer.fill(col);
+        flowerLayer.stroke(20, 5, 0, 100);
+        flowerLayer.strokeWeight(0.5);
+        flowerLayer.ellipse(0, 0, 5 + (seedIndex/maxSeeds)*3, 4 + (seedIndex/maxSeeds)*2);
+        flowerLayer.pop();
 
-            // Dibujar cometas
-            cometas.forEach(cometa => cometa.dibujar());
+        seedIndex++;
+    }
+}
 
-            // 2. Dibujar la flor
-            dibujarTallo(centroX, centroY);
-            
-            // Calculamos cuántos pétalos dibujar en este momento
-            let petalosActuales = Math.min(Math.floor(progresoFlor), totalPetalos);
-            for(let i = 0; i < petalosActuales; i++) {
-                dibujarPetalo(centroX, centroY, (Math.PI * 2 / totalPetalos) * i);
-            }
-
-            // Lógica de avance de la animación
-            if (progresoFlor < totalPetalos) {
-                // Velocidad de aparición de pétalos (más lento)
-                progresoFlor += 0.08; 
-            } else {
-                // Animar el centro
-                if (escalaCentro < 1) escalaCentro += 0.02;
-                dibujarCentro(centroX, centroY, Math.min(escalaCentro, 1));
-                
-                // Animar el texto al final
-                if (escalaCentro >= 1 && opacidadTexto < 1) {
-                    opacidadTexto += 0.005; // Aparición muy suave
-                }
-            }
-
-            // Dibujar el texto si su opacidad es mayor a 0
-            if (opacidadTexto > 0) {
-                dibujarTextoFinal();
-            }
-
-            // Llamar al siguiente frame
-            requestAnimationFrame(animar);
-        }
-
-        // Iniciar animación
-        animar();
-
-    </script>
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+    cx = width / 2;
+    cy = (height / 2) - 80;
+}
+</script>
 </body>
 </html>
