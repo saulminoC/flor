@@ -2,177 +2,353 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Para Ti</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Para Ti ♡</title>
 <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
 <style>
+* { margin: 0; padding: 0; }
 body {
-    margin: 0;
-    padding: 0;
     background-color: #010008;
     overflow: hidden;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
 }
-canvas {
-    display: block;
-}
+canvas { display: block; }
 </style>
 </head>
 <body>
 <script>
+
 let stars = [];
 let comets = [];
 let flowerLayer;
-let petalRing = 6;
+let particles = [];
+let hearts    = [];
+
+let petalRing    = 6;
 let currentPetal = 0;
-let seedIndex = 0;
-const maxSeeds = 450;
-let phase = 0;
+let seedIndex    = 0;
+const MAX_SEEDS  = 490;
+
+let phase     = 0;
 let textAlpha = 0;
 let cx, cy;
 
+// ── Setup ──────────────────────────────────────────────────────────────────
 function setup() {
     createCanvas(windowWidth, windowHeight);
     angleMode(DEGREES);
-    cx = width / 2;
-    cy = (height / 2) - 80; 
-    
-    flowerLayer = createGraphics(windowWidth, windowHeight);
+
+    cx = width  / 2;
+    cy = height * 0.36;
+
+    flowerLayer = createGraphics(width, height);
     flowerLayer.angleMode(DEGREES);
-    flowerLayer.translate(cx, cy);
+    flowerLayer.translate(cx, cy);   // (0,0) = centro de la flor
 
-    flowerLayer.strokeWeight(10);
-    flowerLayer.stroke(34, 139, 34);
-    flowerLayer.noFill();
-    flowerLayer.bezier(0, 0, -20, 100, 20, 250, -10, height - cy + 100);
+    drawStemAndLeaves();
 
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 240; i++) {
         stars.push({
-            x: random(width),
-            y: random(height),
-            r: random(0.5, 2.5),
-            alpha: random(50, 255),
-            speed: random(-3, 3)
+            x:     random(width),
+            y:     random(height),
+            size:  random(0.5, 2.8),
+            phase: random(360)
         });
     }
 
-    for (let i = 0; i < 6; i++) {
-        comets.push(new Cometa());
-    }
+    for (let i = 0; i < 6; i++) comets.push(new Comet(true));
 }
 
-class Cometa {
-    constructor() {
-        this.reset();
-    }
-    reset() {
-        this.x = random(width);
-        this.y = random(-100, -10);
-        this.length = random(60, 180);
-        this.speed = random(12, 22);
-        this.angle = 45;
-        this.delay = random(10, 200);
+// ── Tallo y hojas ─────────────────────────────────────────────────────────
+function drawStemAndLeaves() {
+    let g = flowerLayer;
+    let stemEnd = height - cy - 20;
+
+    g.push();
+    g.strokeWeight(7);
+    g.stroke(34, 128, 34);
+    g.noFill();
+    g.bezier(0, 0,  -18, 90,  22, 220,  -5, stemEnd);
+    g.pop();
+
+    // Hoja izquierda
+    g.push();
+    g.translate(-10, 158);
+    g.rotate(-28);
+    drawLeaf(g, -1);
+    g.pop();
+
+    // Hoja derecha
+    g.push();
+    g.translate(14, 262);
+    g.rotate(22);
+    drawLeaf(g, 1);
+    g.pop();
+}
+
+function drawLeaf(g, dir) {
+    let len = 58;
+    let grad = g.drawingContext.createLinearGradient(0, 0, dir * len, 0);
+    grad.addColorStop(0,   'rgba(22, 105, 22, 1)');
+    grad.addColorStop(0.5, 'rgba(44, 150, 44, 1)');
+    grad.addColorStop(1,   'rgba(72, 168, 55, 0.7)');
+    g.drawingContext.fillStyle = grad;
+    g.stroke(18, 88, 18, 160);
+    g.strokeWeight(0.8);
+
+    g.beginShape();
+    g.vertex(0, 0);
+    g.bezierVertex(dir*20, -18,  dir*len,      -13,  dir*(len+6), 0);
+    g.bezierVertex(dir*len, 13,  dir*20,  18,  0, 0);
+    g.endShape(CLOSE);
+
+    g.noFill();
+    g.stroke(18, 88, 18, 100);
+    g.strokeWeight(0.7);
+    g.line(0, 0, dir * len, 0);
+}
+
+// ── Cometa ─────────────────────────────────────────────────────────────────
+class Comet {
+    constructor(initial = false) { this.reset(initial); }
+    reset(initial = false) {
+        this.x      = random(width);
+        this.y      = random(-130, -5);
+        this.len    = random(75, 215);
+        this.speed  = random(11, 22);
+        this.angle  = random(40, 55);
+        this.delay  = initial ? random(0, 260) : random(20, 150);
+        this.bright = random(0.55, 1.0);
+        this.thick  = random(1.5, 3);
     }
     update() {
-        if (this.delay > 0) {
-            this.delay--;
-            return;
-        }
+        if (this.delay-- > 0) return;
         this.x += cos(this.angle) * this.speed;
         this.y += sin(this.angle) * this.speed;
-        if (this.x > width + 200 || this.y > height + 200) {
-            this.reset();
-        }
+        if (this.x > width + 260 || this.y > height + 260) this.reset();
     }
     draw() {
         if (this.delay > 0) return;
         push();
-        strokeWeight(3);
-        let grad = drawingContext.createLinearGradient(this.x, this.y, this.x - cos(this.angle) * this.length, this.y - sin(this.angle) * this.length);
-        grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
-        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        drawingContext.strokeStyle = grad;
-        line(this.x, this.y, this.x - cos(this.angle) * this.length, this.y - sin(this.angle) * this.length);
+        strokeWeight(this.thick);
+        let tail = drawingContext.createLinearGradient(
+            this.x, this.y,
+            this.x - cos(this.angle)*this.len,
+            this.y - sin(this.angle)*this.len
+        );
+        tail.addColorStop(0,   `rgba(255,255,255,${this.bright})`);
+        tail.addColorStop(0.4, `rgba(200,220,255,${this.bright*0.4})`);
+        tail.addColorStop(1,   'rgba(255,255,255,0)');
+        drawingContext.strokeStyle = tail;
+        line(this.x, this.y,
+             this.x - cos(this.angle)*this.len,
+             this.y - sin(this.angle)*this.len);
         pop();
     }
 }
 
-function draw() {
-    background(1, 0, 12, 60);
+// ── Pétalo flotante ────────────────────────────────────────────────────────
+class FlyPetal {
+    constructor() {
+        this.x   = cx + random(-45, 45);
+        this.y   = cy + random(-25, 25);
+        this.vx  = random(-2, 2);
+        this.vy  = random(-3.8, -0.8);
+        this.rot = random(360);
+        this.rs  = random(-4, 4);
+        this.sz  = random(9, 24);
+        this.a   = 220;
+        this.r   = random(238, 255);
+        this.g   = random(165, 218);
+        this.b   = random(28, 88);
+    }
+    update() {
+        this.x  += this.vx;
+        this.y  += this.vy;
+        this.vy += 0.055;
+        this.vx += random(-0.07, 0.07);
+        this.rot += this.rs;
+        this.a  -= random(1, 2.5);
+    }
+    draw() {
+        push();
+        translate(this.x, this.y);
+        rotate(this.rot);
+        noStroke();
+        fill(this.r, this.g, this.b, this.a);
+        let s = this.sz;
+        beginShape();
+        vertex(0, 0);
+        bezierVertex(s*0.4, -s*0.5,  s,  -s*0.25,  s, 0);
+        bezierVertex(s,  s*0.25,  s*0.4,  s*0.5,  0, 0);
+        endShape(CLOSE);
+        pop();
+    }
+    dead() { return this.a <= 0; }
+}
 
+// ── Corazón flotante ───────────────────────────────────────────────────────
+class FlyHeart {
+    constructor() {
+        this.x  = cx + random(-width * 0.32, width * 0.32);
+        this.y  = height * 0.80;
+        this.vx = random(-0.7, 0.7);
+        this.vy = random(-1.6, -0.5);
+        this.sz = random(6, 17);
+        this.a  = random(155, 240);
+        this.fs = random(0.5, 1.2);
+        this.cr = random([255, 255, 228]);
+        this.cg = random([62, 95, 108]);
+        this.cb = random([105, 135, 155]);
+    }
+    update() {
+        this.x  += this.vx;
+        this.y  += this.vy;
+        this.vy -= 0.015;
+        this.a  -= this.fs;
+    }
+    draw() {
+        push();
+        translate(this.x, this.y);
+        noStroke();
+        fill(this.cr, this.cg, this.cb, this.a);
+        let s = this.sz / 16;
+        beginShape();
+        for (let ang = 0; ang < 360; ang += 6) {
+            let rad = ang * PI / 180;
+            let hx =  s * 16 * pow(sin(rad), 3);
+            let hy = -s * (13*cos(rad) - 5*cos(2*rad) - 2*cos(3*rad) - cos(4*rad));
+            vertex(hx, hy);
+        }
+        endShape(CLOSE);
+        pop();
+    }
+    dead() { return this.a <= 0; }
+}
+
+// ── Loop principal ─────────────────────────────────────────────────────────
+function draw() {
+    background(1, 0, 12, 57);
+
+    // Estrellas con parpadeo suave
     noStroke();
     for (let s of stars) {
-        fill(255, 255, 255, s.alpha);
-        circle(s.x, s.y, s.r);
-        s.alpha += s.speed;
-        if (s.alpha <= 20 || s.alpha >= 255) s.speed *= -1;
+        let t = sin(frameCount * 1.8 + s.phase);
+        let a = map(t, -1, 1, 55, 255);
+        let r = map(t, -1, 1, s.size * 0.55, s.size * 1.3);
+        fill(255, 255, 255, a);
+        circle(s.x, s.y, r);
     }
 
-    for (let c of comets) {
-        c.update();
-        c.draw();
-    }
+    // Cometas
+    for (let c of comets) { c.update(); c.draw(); }
 
+    // Capa de flor
     image(flowerLayer, 0, 0);
 
-    if (frameCount % 3 === 0) {
-        if (phase === 0) {
-            drawPetalRing();
-        } else if (phase === 1) {
-            drawSeeds();
-        }
+    // Crecimiento por fases
+    if (frameCount % 2 === 0) {
+        if      (phase === 0) growPetalRing();
+        else if (phase === 1) growSeeds();
     }
 
+    // Fase de floración completa
     if (phase === 2) {
-        textAlpha += 1.5;
-        if (textAlpha > 255) textAlpha = 255;
+        if (frameCount % 4 === 0 && particles.length < 65)
+            particles.push(new FlyPetal());
+
+        if (textAlpha > 80 && frameCount % 10 === 0 && hearts.length < 28)
+            hearts.push(new FlyHeart());
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update(); particles[i].draw();
+            if (particles[i].dead()) particles.splice(i, 1);
+        }
+        for (let i = hearts.length - 1; i >= 0; i--) {
+            hearts[i].update(); hearts[i].draw();
+            if (hearts[i].dead()) hearts.splice(i, 1);
+        }
+
+        // Brillo pulsante alrededor del centro
+        noStroke();
+        let glow = map(sin(frameCount * 2), -1, 1, 14, 46);
+        for (let r = 72; r > 0; r -= 11) {
+            fill(255, 200, 60, map(r, 0, 72, glow, 0));
+            circle(cx, cy, r * 2);
+        }
+
+        // Texto
+        textAlpha = min(textAlpha + 1.5, 255);
+
         push();
+        drawingContext.shadowColor = 'rgba(255, 175, 70, 0.88)';
+        drawingContext.shadowBlur  = 38;
         textFont('Dancing Script');
-        textSize(80);
         textAlign(CENTER, CENTER);
-        fill(255, 255, 255, textAlpha);
-        drawingContext.shadowColor = 'rgba(0,0,0,0.9)';
-        drawingContext.shadowBlur = 15;
-        text("Te Amo", cx, cy + 60);
+
+        textSize(min(width * 0.15, 90));
+        fill(255, 244, 208, textAlpha);
+        text('Te Amo', cx, height * 0.82);
+
+        if (textAlpha > 165) {
+            drawingContext.shadowBlur = 22;
+            textSize(min(width * 0.07, 42));
+            fill(255, 155, 178, textAlpha - 100);
+            text('♡', cx, height * 0.905);
+        }
         pop();
     }
 }
 
-function drawPetalRing() {
-    if (petalRing < 0) {
-        phase = 1;
-        return;
-    }
+// ── Constructor de anillos de pétalos ──────────────────────────────────────
+function growPetalRing() {
+    if (petalRing < 0) { phase = 1; return; }
 
     let numPetals = 12 + petalRing * 6;
-    let radius = 10 + petalRing * 8;
-    let pAngle = 360 / numPetals;
+    let radius    = 10 + petalRing * 8;
+    let pAngle    = 360 / numPetals;
+    let offset    = (petalRing % 2) * (pAngle / 2);
 
     flowerLayer.push();
-    flowerLayer.rotate(currentPetal * pAngle + (petalRing % 2 * 10));
-    
-    let petalLength = 60 + petalRing * 11;
-    let petalWidth = 15 + petalRing * 4;
+    flowerLayer.rotate(currentPetal * pAngle + offset);
 
-    let grad = flowerLayer.drawingContext.createLinearGradient(0, 0, petalLength, 0);
-    grad.addColorStop(0, '#f39c12');
-    grad.addColorStop(0.2, '#f1c40f');
-    grad.addColorStop(1, '#fceabb');
+    let pLen = 58 + petalRing * 12;
+    let pWid = 13 + petalRing * 4.5;
 
-    flowerLayer.fill(255);
+    let grad = flowerLayer.drawingContext.createLinearGradient(
+        radius, 0, radius + pLen, 0
+    );
+    grad.addColorStop(0,    '#bf5c08');
+    grad.addColorStop(0.15, '#df6f0f');
+    grad.addColorStop(0.40, '#f39c12');
+    grad.addColorStop(0.75, '#f1c40f');
+    grad.addColorStop(1,    '#fef9e7');
+
     flowerLayer.drawingContext.fillStyle = grad;
-    flowerLayer.stroke(211, 84, 0, 150);
+    flowerLayer.stroke(158, 68, 0, 112);
     flowerLayer.strokeWeight(0.5);
 
     flowerLayer.beginShape();
     flowerLayer.vertex(radius, 0);
-    flowerLayer.bezierVertex(radius + petalLength / 2, -petalWidth, radius + petalLength, -petalWidth / 4, radius + petalLength, 0);
-    flowerLayer.bezierVertex(radius + petalLength, petalWidth / 4, radius + petalLength / 2, petalWidth, radius, 0);
+    flowerLayer.bezierVertex(
+        radius + pLen*0.4, -pWid,
+        radius + pLen*0.8, -pWid*0.3,
+        radius + pLen, 0
+    );
+    flowerLayer.bezierVertex(
+        radius + pLen*0.8,  pWid*0.3,
+        radius + pLen*0.4,  pWid,
+        radius, 0
+    );
     flowerLayer.endShape(CLOSE);
-    
-    flowerLayer.stroke(211, 84, 0, 90);
+
+    // Nervio central del pétalo
     flowerLayer.noFill();
-    flowerLayer.bezier(radius, 0, radius + petalLength / 2, -3, radius + petalLength - 15, 0, radius + petalLength, 0);
+    flowerLayer.stroke(185, 108, 0, 68);
+    flowerLayer.strokeWeight(0.6);
+    flowerLayer.line(radius, 0, radius + pLen * 0.82, 0);
 
     flowerLayer.pop();
 
@@ -183,42 +359,57 @@ function drawPetalRing() {
     }
 }
 
-function drawSeeds() {
-    let maxPerFrame = 6;
-    for (let i = 0; i < maxPerFrame; i++) {
-        if (seedIndex > maxSeeds) {
+// ── Patrón de semillas Fibonacci ───────────────────────────────────────────
+function growSeeds() {
+    for (let i = 0; i < 8; i++) {
+        if (seedIndex >= MAX_SEEDS) {
+            drawCenter();
             phase = 2;
             return;
         }
 
-        let c = 3.5;
-        let a = seedIndex * 137.5;
-        let r = c * sqrt(seedIndex);
-
+        let a = seedIndex * 137.508;          // ángulo dorado
+        let r = 3.6 * sqrt(seedIndex);
         let x = r * cos(a);
         let y = r * sin(a);
+        let t = seedIndex / MAX_SEEDS;
 
         flowerLayer.push();
         flowerLayer.translate(x, y);
         flowerLayer.rotate(a);
-        
-        let lerpFac = map(seedIndex, 0, maxSeeds, 0, 1);
-        let col = lerpColor(color(40, 15, 0), color(160, 70, 0), lerpFac);
-        
-        flowerLayer.fill(col);
-        flowerLayer.stroke(20, 5, 0, 100);
-        flowerLayer.strokeWeight(0.5);
-        flowerLayer.ellipse(0, 0, 5 + (seedIndex/maxSeeds)*3, 4 + (seedIndex/maxSeeds)*2);
+        flowerLayer.fill(lerp(18, 108, t), lerp(7, 46, t), 0);
+        flowerLayer.stroke(10, 3, 0, 88);
+        flowerLayer.strokeWeight(0.4);
+        flowerLayer.ellipse(0, 0, (4 + t*3)*0.75, 4 + t*3);
         flowerLayer.pop();
 
         seedIndex++;
     }
 }
 
+// ── Centro oscuro con aro dorado ───────────────────────────────────────────
+function drawCenter() {
+    flowerLayer.push();
+    let grad = flowerLayer.drawingContext.createRadialGradient(0,0,0, 0,0,50);
+    grad.addColorStop(0,    'rgba(10, 4, 0, 1)');
+    grad.addColorStop(0.55, 'rgba(48, 18, 0, 0.78)');
+    grad.addColorStop(1,    'rgba(88, 42, 0, 0)');
+    flowerLayer.drawingContext.fillStyle = grad;
+    flowerLayer.noStroke();
+    flowerLayer.circle(0, 0, 100);
+
+    flowerLayer.noFill();
+    flowerLayer.stroke(158, 108, 18, 135);
+    flowerLayer.strokeWeight(2);
+    flowerLayer.circle(0, 0, 82);
+    flowerLayer.pop();
+}
+
+// ── Redimensionar ──────────────────────────────────────────────────────────
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
-    cx = width / 2;
-    cy = (height / 2) - 80;
+    cx = width  / 2;
+    cy = height * 0.36;
 }
 </script>
 </body>
